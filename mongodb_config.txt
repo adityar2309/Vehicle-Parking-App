@@ -1,0 +1,4 @@
+# MongoDB Atlas Configuration
+# Copy this connection string to your app.yaml file
+
+MONGODB_URI=mongodb+srv://adityar42069:3gWpp7BOWrXR9MKf@vehicleparkingapps.wgpt32k.mongodb.net/vehicleparkingapp.vehicleparkingapp
