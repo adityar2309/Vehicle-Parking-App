@@ -7,10 +7,10 @@ env_variables:
   FLASK_ENV: "production"
   
   # Redis Configuration - Using only database 0 (Redis Cloud free tier limitation)
-  REDIS_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
-  CACHE_REDIS_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
-  CELERY_BROKER_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
-  CELERY_RESULT_BACKEND: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
+  REDIS_URL: "redis://:redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0/0"
+  CACHE_REDIS_URL: "redis://:redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0/0"
+  CELERY_BROKER_URL: "redis://:redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0/0"
+  CELERY_RESULT_BACKEND: "redis://:redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0/0"
   
   # Email configuration (optional)
   MAIL_SERVER: "smtp.gmail.com"
