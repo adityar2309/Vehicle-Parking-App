@@ -1,7 +1,7 @@
 [build]
-  publish = "build"
-  command = "CI=false npm run build"
-  base = "frontend"
+  publish = "frontend/build"
+  command = "cd frontend && CI=false npm run build"
+  base = "."
 
 [build.environment]
   REACT_APP_API_URL = "https://ttsai-461209.de.r.appspot.com"
