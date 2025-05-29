@@ -1,0 +1,27 @@
+runtime: python39
+
+env_variables:
+  SECRET_KEY: "your-production-secret-key-change-this"
+  JWT_SECRET_KEY: "your-production-jwt-secret-change-this"
+  MONGODB_URI: "mongodb+srv://username:password@cluster.mongodb.net/parking_app"
+  FLASK_ENV: "production"
+  
+  # Email configuration (optional)
+  MAIL_SERVER: "smtp.gmail.com"
+  MAIL_PORT: "587"
+  MAIL_USE_TLS: "true"
+  MAIL_USERNAME: "your-email@gmail.com"
+  MAIL_PASSWORD: "your-app-password"
+  
+  # CORS origins for production
+  CORS_ORIGINS: "https://your-frontend-domain.netlify.app"
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+resources:
+  cpu: 1
+  memory_gb: 0.5
+  disk_size_gb: 10 

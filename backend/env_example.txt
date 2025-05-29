@@ -1,0 +1,43 @@
+# Vehicle Parking App - Environment Configuration
+# Copy this file to .env and update with your actual values
+
+# Flask Configuration
+SECRET_KEY=your-secret-key-change-in-production
+JWT_SECRET_KEY=your-jwt-secret-key
+
+# MongoDB Configuration (replaces PostgreSQL)
+MONGODB_URI=mongodb://localhost:27017/parking_app
+
+# Email Configuration (SMTP)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER=your-email@gmail.com
+
+# Scheduler Configuration
+SCHEDULER_TIMEZONE=UTC
+DAILY_REMINDER_TIME=18:00
+MONTHLY_REPORT_TIME=09:00
+MONTHLY_REPORT_DAY=1
+
+# File Storage Configuration
+UPLOAD_FOLDER=temp_files
+CSV_EXPORT_EXPIRY_HOURS=24
+
+# Optional Integrations
+GOOGLE_CHAT_WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/YOUR_SPACE/messages?key=YOUR_KEY
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-phone-number
+
+# Redis Configuration (DISABLED - commented out)
+# CACHE_TYPE=redis
+# CACHE_REDIS_URL=redis://localhost:6379/0
+# CACHE_DEFAULT_TIMEOUT=300
+# CELERY_BROKER_URL=redis://localhost:6379/1
+# CELERY_RESULT_BACKEND=redis://localhost:6379/1
+
+# Database Configuration (LEGACY - commented out)
+# DATABASE_URL=postgresql://user:password@localhost/parking_app 
