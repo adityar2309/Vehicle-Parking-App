@@ -1,15 +1,17 @@
-# Cache Service - Redis functionality commented out, using simple in-memory cache
-# from flask_caching import Cache  # Commented out - Redis dependency
+# Cache Service - Redis and Flask-Caching integration with fallback
+from flask_caching import Cache
 from functools import wraps
 import json
 import logging
 import time
+import redis
+from urllib.parse import urlparse
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize cache (commented out - Redis dependency)
-# cache = Cache()
+# Initialize cache
+cache = Cache()
 
 # Simple in-memory cache as fallback
 class SimpleCache:
@@ -47,17 +49,55 @@ class SimpleCache:
         self._cache.clear()
         self._expiry.clear()
 
-# Initialize simple cache
-cache = SimpleCache()
+# Initialize simple cache as fallback
+simple_cache = SimpleCache()
 
 class CacheService:
     """Service class for handling caching operations"""
     
+    _redis_available = False
+    _cache_instance = None
+    
     @staticmethod
     def init_cache(app):
         """Initialize cache with Flask app"""
-        # cache.init_app(app)  # Commented out - Redis dependency
-        logger.info("Cache service initialized (using simple in-memory cache)")
+        try:
+            # Try to initialize Redis cache
+            cache.init_app(app)
+            
+            # Test Redis connection
+            redis_url = app.config.get('CACHE_REDIS_URL')
+            if redis_url:
+                # Parse Redis URL and test connection
+                parsed_url = urlparse(redis_url)
+                r = redis.Redis(
+                    host=parsed_url.hostname or 'localhost',
+                    port=parsed_url.port or 6379,
+                    password=parsed_url.password,
+                    decode_responses=True
+                )
+                r.ping()  # Test connection
+                CacheService._redis_available = True
+                CacheService._cache_instance = cache
+                logger.info("Redis cache initialized successfully")
+            else:
+                raise Exception("No Redis URL configured")
+                
+        except Exception as e:
+            logger.warning(f"Redis cache initialization failed: {str(e)}")
+            logger.info("Falling back to simple in-memory cache")
+            CacheService._redis_available = False
+            CacheService._cache_instance = simple_cache
+    
+    @staticmethod
+    def get_cache():
+        """Get the active cache instance"""
+        return CacheService._cache_instance or simple_cache
+    
+    @staticmethod
+    def is_redis_available():
+        """Check if Redis is available"""
+        return CacheService._redis_available
     
     @staticmethod
     def get_parking_lots_cache_key():
@@ -90,16 +130,18 @@ class CacheService:
     def invalidate_parking_lot_cache(lot_id=None):
         """Invalidate parking lot related cache"""
         try:
+            active_cache = CacheService.get_cache()
+            
             # Clear all parking lots cache
-            cache.delete(CacheService.get_parking_lots_cache_key())
+            active_cache.delete(CacheService.get_parking_lots_cache_key())
             
             if lot_id:
                 # Clear specific parking lot cache
-                cache.delete(CacheService.get_parking_lot_cache_key(lot_id))
-                cache.delete(CacheService.get_parking_spots_cache_key(lot_id))
+                active_cache.delete(CacheService.get_parking_lot_cache_key(lot_id))
+                active_cache.delete(CacheService.get_parking_spots_cache_key(lot_id))
             
             # Clear dashboard stats cache
-            cache.delete(CacheService.get_dashboard_stats_cache_key())
+            active_cache.delete(CacheService.get_dashboard_stats_cache_key())
             
             logger.info(f"Parking lot cache invalidated for lot_id: {lot_id}")
         except Exception as e:
@@ -109,8 +151,9 @@ class CacheService:
     def invalidate_user_cache(user_id):
         """Invalidate user-specific cache"""
         try:
-            cache.delete(CacheService.get_user_reservations_cache_key(user_id))
-            cache.delete(CacheService.get_dashboard_stats_cache_key(user_id))
+            active_cache = CacheService.get_cache()
+            active_cache.delete(CacheService.get_user_reservations_cache_key(user_id))
+            active_cache.delete(CacheService.get_dashboard_stats_cache_key(user_id))
             logger.info(f"User cache invalidated for user_id: {user_id}")
         except Exception as e:
             logger.error(f"Failed to invalidate user cache: {str(e)}")
@@ -119,7 +162,8 @@ class CacheService:
     def cache_parking_lots(data, timeout=300):
         """Cache parking lots data"""
         try:
-            cache.set(CacheService.get_parking_lots_cache_key(), data, timeout=timeout)
+            active_cache = CacheService.get_cache()
+            active_cache.set(CacheService.get_parking_lots_cache_key(), data, timeout=timeout)
             logger.debug("Parking lots data cached")
         except Exception as e:
             logger.error(f"Failed to cache parking lots: {str(e)}")
@@ -128,7 +172,8 @@ class CacheService:
     def get_cached_parking_lots():
         """Get cached parking lots data"""
         try:
-            return cache.get(CacheService.get_parking_lots_cache_key())
+            active_cache = CacheService.get_cache()
+            return active_cache.get(CacheService.get_parking_lots_cache_key())
         except Exception as e:
             logger.error(f"Failed to get cached parking lots: {str(e)}")
             return None
@@ -137,7 +182,8 @@ class CacheService:
     def cache_parking_lot(lot_id, data, timeout=300):
         """Cache specific parking lot data"""
         try:
-            cache.set(CacheService.get_parking_lot_cache_key(lot_id), data, timeout=timeout)
+            active_cache = CacheService.get_cache()
+            active_cache.set(CacheService.get_parking_lot_cache_key(lot_id), data, timeout=timeout)
             logger.debug(f"Parking lot {lot_id} data cached")
         except Exception as e:
             logger.error(f"Failed to cache parking lot {lot_id}: {str(e)}")
@@ -146,7 +192,8 @@ class CacheService:
     def get_cached_parking_lot(lot_id):
         """Get cached parking lot data"""
         try:
-            return cache.get(CacheService.get_parking_lot_cache_key(lot_id))
+            active_cache = CacheService.get_cache()
+            return active_cache.get(CacheService.get_parking_lot_cache_key(lot_id))
         except Exception as e:
             logger.error(f"Failed to get cached parking lot {lot_id}: {str(e)}")
             return None
@@ -169,6 +216,8 @@ def cached_response(timeout=300, key_func=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             try:
+                active_cache = CacheService.get_cache()
+                
                 # Generate cache key
                 if key_func:
                     cache_key = key_func(*args, **kwargs)
@@ -177,14 +226,14 @@ def cached_response(timeout=300, key_func=None):
                     cache_key = f"{f.__name__}:{hash(str(args) + str(kwargs))}"
                 
                 # Try to get cached response
-                cached_result = cache.get(cache_key)
+                cached_result = active_cache.get(cache_key)
                 if cached_result is not None:
                     logger.debug(f"Cache hit for key: {cache_key}")
                     return cached_result
                 
                 # Execute function and cache result
                 result = f(*args, **kwargs)
-                cache.set(cache_key, result, timeout=timeout)
+                active_cache.set(cache_key, result, timeout=timeout)
                 logger.debug(f"Cache set for key: {cache_key}")
                 
                 return result
@@ -198,72 +247,87 @@ def cached_response(timeout=300, key_func=None):
     return decorator
 
 def cache_key_with_user(user_id):
-    """Helper function to generate cache key with user ID"""
+    """Generate cache key function with user ID"""
     def key_generator(*args, **kwargs):
-        return f"user:{user_id}:args:{hash(str(args) + str(kwargs))}"
+        return f"user:{user_id}:{args}:{kwargs}"
     return key_generator
 
 def cache_key_with_params(**params):
-    """Helper function to generate cache key with custom parameters"""
+    """Generate cache key function with custom parameters"""
     def key_generator(*args, **kwargs):
-        param_str = ":".join([f"{k}:{v}" for k, v in params.items()])
-        return f"custom:{param_str}:args:{hash(str(args) + str(kwargs))}"
+        param_str = ':'.join([f"{k}:{v}" for k, v in params.items()])
+        return f"params:{param_str}:{args}:{kwargs}"
     return key_generator
 
 class CacheStats:
-    """Class for tracking cache statistics"""
+    """Class for cache statistics and management"""
     
     @staticmethod
     def get_cache_info():
         """Get cache information and statistics"""
         try:
-            # Simple cache info
-            return {
-                "cache_type": "simple_memory",
-                "status": "active",
-                "note": "Using simple in-memory cache (Redis disabled)"
+            cache_type = "Redis" if CacheService.is_redis_available() else "Simple"
+            stats = {
+                'cache_type': cache_type,
+                'redis_available': CacheService.is_redis_available(),
+                'status': 'active'
             }
+            
+            if CacheService.is_redis_available():
+                # Get Redis-specific stats if available
+                try:
+                    redis_url = CacheService._cache_instance.config.get('CACHE_REDIS_URL')
+                    if redis_url:
+                        parsed_url = urlparse(redis_url)
+                        r = redis.Redis(
+                            host=parsed_url.hostname or 'localhost',
+                            port=parsed_url.port or 6379,
+                            password=parsed_url.password
+                        )
+                        info = r.info()
+                        stats['redis_info'] = {
+                            'connected_clients': info.get('connected_clients', 0),
+                            'used_memory_human': info.get('used_memory_human', 'N/A'),
+                            'total_commands_processed': info.get('total_commands_processed', 0)
+                        }
+                except Exception as e:
+                    stats['redis_error'] = str(e)
+            
+            return stats
         except Exception as e:
             logger.error(f"Failed to get cache info: {str(e)}")
-            return {"status": "error", "message": str(e)}
+            return {'status': 'error', 'error': str(e)}
     
     @staticmethod
     def clear_all_cache():
-        """Clear all cache (use with caution)"""
+        """Clear all cache data"""
         try:
-            cache.clear()
-            logger.info("All cache cleared")
-            return True
+            active_cache = CacheService.get_cache()
+            if hasattr(active_cache, 'clear'):
+                active_cache.clear()
+                logger.info("All cache cleared successfully")
+                return True
+            else:
+                logger.warning("Cache clear not supported")
+                return False
         except Exception as e:
             logger.error(f"Failed to clear cache: {str(e)}")
             return False
 
-# Performance monitoring decorator
 def monitor_performance(func_name=None):
     """Decorator to monitor function performance"""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            import time
             start_time = time.time()
-            
             try:
                 result = f(*args, **kwargs)
                 execution_time = time.time() - start_time
-                
-                logger.info(f"Performance: {func_name or f.__name__} executed in {execution_time:.3f}s")
+                logger.info(f"Function {func_name or f.__name__} executed in {execution_time:.3f}s")
                 return result
-                
             except Exception as e:
                 execution_time = time.time() - start_time
-                logger.error(f"Performance: {func_name or f.__name__} failed in {execution_time:.3f}s - {str(e)}")
+                logger.error(f"Function {func_name or f.__name__} failed after {execution_time:.3f}s: {str(e)}")
                 raise
-        
         return decorated_function
-    return decorator
-
-# Legacy Redis cache code (commented out)
-"""
-from flask_caching import Cache
-# ... all Redis-related cache code commented out ...
-""" 
+    return decorator 

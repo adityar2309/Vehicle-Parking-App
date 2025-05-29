@@ -32,19 +32,25 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or 'your-app-password'
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'your-email@gmail.com'
     
-    # Caching configuration (commented out - Redis dependency)
-    # CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'redis'
-    # CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/0'
-    # CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT') or 300)  # 5 minutes
+    # Redis & Caching configuration
+    CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'redis'
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/0'
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT') or 300)  # 5 minutes
     
-    # Celery configuration (commented out - Redis dependency)
-    # CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/1'
-    # CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379/1'
+    # Celery configuration
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL') or os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/1'
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL') or os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379/1'
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TIMEZONE = 'UTC'
+    CELERY_ENABLE_UTC = True
     
-    # Scheduler configuration (modified to use memory store instead of Redis)
+    # Scheduler configuration
     SCHEDULER_API_ENABLED = True
     SCHEDULER_TIMEZONE = os.environ.get('SCHEDULER_TIMEZONE') or 'UTC'
-    SCHEDULER_JOBSTORE = 'memory'  # Use memory instead of Redis
+    SCHEDULER_JOBSTORE = os.environ.get('SCHEDULER_JOBSTORE') or 'redis'  # Use Redis if available, fallback to memory
+    SCHEDULER_REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/2'
     
     # Job configuration
     DAILY_REMINDER_TIME = os.environ.get('DAILY_REMINDER_TIME') or '18:00'  # 6 PM

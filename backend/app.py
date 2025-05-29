@@ -12,7 +12,7 @@ from export_routes import export_bp
 from email_service import mail
 from cache_service import CacheService
 from scheduler import SchedulerService, SimpleScheduler
-# from background_jobs import make_celery  # Commented out - Celery dependency
+from background_jobs import make_celery, is_celery_available  # Re-enabled Celery
 import os
 import logging
 
@@ -40,20 +40,23 @@ def create_app():
     # Initialize email service
     mail.init_app(app)
     
-    # Initialize cache service (using simple in-memory cache)
+    # Initialize cache service (Redis or fallback to simple cache)
     try:
         CacheService.init_cache(app)
         logger.info("Cache service initialized successfully")
     except Exception as e:
         logger.warning(f"Failed to initialize cache service: {str(e)}")
     
-    # Initialize Celery for background jobs (commented out)
-    # try:
-    #     celery = make_celery(app)
-    #     app.celery = celery
-    #     logger.info("Celery initialized successfully")
-    # except Exception as e:
-    #     logger.warning(f"Failed to initialize Celery: {str(e)}")
+    # Initialize Celery for background jobs
+    try:
+        celery = make_celery(app)
+        app.celery = celery
+        if is_celery_available():
+            logger.info("Celery initialized successfully")
+        else:
+            logger.info("Celery fallback mode - synchronous execution")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Celery: {str(e)}")
     
     # Initialize scheduler
     try:
@@ -96,15 +99,17 @@ def create_app():
     @app.route('/health', methods=['GET'])
     def health_check():
         """Health check endpoint"""
+        cache_status = 'redis' if CacheService.is_redis_available() else 'simple'
+        celery_status = 'active' if is_celery_available() else 'sync_fallback'
+        
         return jsonify({
             'status': 'healthy',
             'message': 'Vehicle Parking App API is running',
             'services': {
                 'database': 'mongodb_connected',
-                'cache': 'simple_memory' if hasattr(app, 'cache') else 'disabled',
+                'cache': cache_status,
                 'scheduler': 'active' if hasattr(app, 'scheduler') else 'disabled',
-                # 'celery': 'active' if hasattr(app, 'celery') else 'disabled'  # Commented out
-                'celery': 'disabled'  # Always disabled now
+                'celery': celery_status
             }
         }), 200
     
@@ -112,18 +117,21 @@ def create_app():
     @app.route('/', methods=['GET'])
     def root():
         """Root endpoint with API information"""
+        job_mode = 'Async (Celery)' if is_celery_available() else 'Sync (Fallback)'
+        cache_type = 'Redis Cache' if CacheService.is_redis_available() else 'Simple Cache'
+        
         return jsonify({
             'message': 'Vehicle Parking App API',
-            'version': '3.0',
+            'version': '4.0',
             'database': 'MongoDB',
             'features': [
                 'JWT Authentication',
                 'Role-based Access Control',
                 'Parking Management',
-                'Background Jobs (Synchronous)',
+                f'Background Jobs ({job_mode})',
                 'Email Notifications',
                 'CSV Export',
-                'Simple Caching',
+                cache_type,
                 'Scheduled Tasks'
             ],
             'endpoints': {
@@ -158,14 +166,21 @@ def create_app():
     def admin_jobs():
         """Admin endpoint to view scheduled jobs"""
         try:
+            job_info = {
+                'celery_available': is_celery_available(),
+                'execution_mode': 'async' if is_celery_available() else 'sync'
+            }
+            
             if hasattr(app, 'scheduler'):
                 jobs = app.scheduler.get_jobs()
-                return jsonify({
+                job_info.update({
                     'scheduled_jobs': jobs,
                     'scheduler_type': type(app.scheduler).__name__
-                }), 200
+                })
             else:
-                return jsonify({'error': 'Scheduler not available'}), 503
+                job_info['scheduler'] = 'not_available'
+            
+            return jsonify(job_info), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
@@ -179,6 +194,17 @@ def create_app():
                 return jsonify({'message': 'Cache cleared successfully'}), 200
             else:
                 return jsonify({'error': 'Failed to clear cache'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    # Admin endpoint for cache info
+    @app.route('/admin/cache/info', methods=['GET'])
+    def admin_cache_info():
+        """Admin endpoint to get cache information"""
+        try:
+            from cache_service import CacheStats
+            cache_info = CacheStats.get_cache_info()
+            return jsonify(cache_info), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
