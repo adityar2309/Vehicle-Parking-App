@@ -6,11 +6,11 @@ env_variables:
   MONGODB_URI: "mongodb+srv://adityar42069:3gWpp7BOWrXR9MKf@vehicleparkingapps.wgpt32k.mongodb.net/vehicleparkingapp"
   FLASK_ENV: "production"
   
-  # Redis Configuration (will be updated with actual Redis Cloud URL)
-  REDIS_URL: "redis://localhost:6379/0"
-  CACHE_REDIS_URL: "redis://localhost:6379/0"
-  CELERY_BROKER_URL: "redis://localhost:6379/1"
-  CELERY_RESULT_BACKEND: "redis://localhost:6379/1"
+  # Redis Configuration - Using only database 0 (Redis Cloud free tier limitation)
+  REDIS_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
+  CACHE_REDIS_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
+  CELERY_BROKER_URL: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
+  CELERY_RESULT_BACKEND: "redis://:YOUR_REDIS_PASSWORD@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
   
   # Email configuration (optional)
   MAIL_SERVER: "smtp.gmail.com"
