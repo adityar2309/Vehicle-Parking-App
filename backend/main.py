@@ -5,6 +5,7 @@ Main entry point for Google App Engine deployment
 
 import os
 import logging
+import tempfile
 from app import create_app, init_database, start_background_services
 
 # Configure logging for production
@@ -28,9 +29,14 @@ try:
 except Exception as e:
     logger.error(f"Background services startup failed: {str(e)}")
 
-# Create temp directory for file uploads
-temp_dir = app.config.get('UPLOAD_FOLDER', 'temp_files')
-os.makedirs(temp_dir, exist_ok=True)
+# Handle temp directory for App Engine (read-only file system)
+try:
+    # Use system temp directory for App Engine
+    temp_dir = tempfile.gettempdir()
+    app.config['UPLOAD_FOLDER'] = temp_dir
+    logger.info(f"Using temp directory: {temp_dir}")
+except Exception as e:
+    logger.warning(f"Temp directory setup failed: {str(e)}")
 
 # Log startup information
 logger.info("Vehicle Parking App - Backend deployed to Google Cloud")
