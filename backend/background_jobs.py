@@ -21,27 +21,33 @@ def make_celery(app):
     """Create Celery instance and configure it with Flask app"""
     global celery
     try:
-        celery = Celery(
-            app.import_name,
-            backend=app.config['CELERY_RESULT_BACKEND'],
-            broker=app.config['CELERY_BROKER_URL']
-        )
+        # Redis disabled - Celery configuration commented out
+        # celery = Celery(
+        #     app.import_name,
+        #     backend=app.config['CELERY_RESULT_BACKEND'],
+        #     broker=app.config['CELERY_BROKER_URL']
+        # )
         
-        celery.conf.update(app.config)
+        # celery.conf.update(app.config)
         
-        class ContextTask(celery.Task):
-            """Make celery tasks work with Flask app context"""
-            def __call__(self, *args, **kwargs):
-                with app.app_context():
-                    return self.run(*args, **kwargs)
+        # class ContextTask(celery.Task):
+        #     """Make celery tasks work with Flask app context"""
+        #     def __call__(self, *args, **kwargs):
+        #         with app.app_context():
+        #             return self.run(*args, **kwargs)
         
-        celery.Task = ContextTask
+        # celery.Task = ContextTask
         
         # Test the connection
-        celery.control.inspect().stats()
+        # celery.control.inspect().stats()
         
-        logger.info("Celery initialized successfully")
-        return celery
+        # logger.info("Celery initialized successfully")
+        # return celery
+        
+        # Redis disabled - return None instead of Celery instance
+        logger.info("Redis/Celery disabled - using synchronous job execution")
+        celery = None
+        return None
         
     except Exception as e:
         logger.warning(f"Celery initialization failed: {str(e)}")

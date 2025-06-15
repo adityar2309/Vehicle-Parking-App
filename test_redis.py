@@ -5,8 +5,8 @@ Redis Connection Test Script
 This script tests your Redis connection before deploying with Celery/Redis.
 """
 
-import redis
-import time
+# import redis  # Redis disabled
+import os
 from urllib.parse import urlparse
 
 def test_redis_connection():
@@ -28,111 +28,38 @@ def test_redis_connection():
     try:
         print("\n🔄 Parsing Redis URL...")
         parsed_url = urlparse(redis_url)
-        
         print(f"Host: {parsed_url.hostname}")
         print(f"Port: {parsed_url.port}")
-        print(f"Password: {'***' if parsed_url.password else 'None'}")
+        print(f"Database: {parsed_url.path[1:] if parsed_url.path else '0'}")
         
         print("\n🔄 Connecting to Redis...")
         
         # Create Redis client
-        r = redis.Redis(
-            host=parsed_url.hostname,
-            port=parsed_url.port,
-            password=parsed_url.password,
-            decode_responses=True,
-            socket_timeout=10,
-            socket_connect_timeout=10
-        )
+        # r = redis.Redis(  # Redis disabled
+        #     host=parsed_url.hostname,
+        #     port=parsed_url.port,
+        #     password=parsed_url.password,
+        #     db=int(parsed_url.path[1:]) if parsed_url.path else 0,
+        #     decode_responses=True,
+        #     socket_connect_timeout=5,
+        #     socket_timeout=5
+        # )
         
-        # Test connection
-        r.ping()
-        print("✅ Successfully connected to Redis!")
+        print("✅ Redis connection disabled")
+        # print("✅ Successfully connected to Redis!")
         
         # Test basic operations
         print("\n🔄 Testing Redis operations...")
         
-        # Test SET/GET
-        test_key = "test_parking_app"
-        test_value = f"test_value_{int(time.time())}"
-        r.set(test_key, test_value, ex=60)  # Expire in 60 seconds
+        # ... rest of Redis test code commented out ...
         
-        retrieved_value = r.get(test_key)
-        if retrieved_value == test_value:
-            print("✅ SET/GET operations working!")
-        else:
-            print("❌ SET/GET operations failed!")
-            return False
-        
-        # Test different databases
-        print("\n🔄 Testing multiple databases...")
-        
-        # Test db 0 (cache)
-        r0 = redis.Redis(
-            host=parsed_url.hostname,
-            port=parsed_url.port,
-            password=parsed_url.password,
-            db=0,
-            decode_responses=True
-        )
-        r0.set("cache_test", "cache_working")
-        
-        # Test db 1 (celery broker)
-        r1 = redis.Redis(
-            host=parsed_url.hostname,
-            port=parsed_url.port,
-            password=parsed_url.password,
-            db=1,
-            decode_responses=True
-        )
-        r1.set("celery_test", "celery_working")
-        
-        # Verify separation
-        if r0.get("cache_test") == "cache_working" and r1.get("celery_test") == "celery_working":
-            print("✅ Multiple databases working!")
-        else:
-            print("❌ Multiple databases failed!")
-            return False
-        
-        # Test Redis info
-        print("\n📊 Redis Server Information:")
-        info = r.info()
-        print(f"Redis Version: {info.get('redis_version', 'Unknown')}")
-        print(f"Connected Clients: {info.get('connected_clients', 0)}")
-        print(f"Used Memory: {info.get('used_memory_human', 'Unknown')}")
-        print(f"Total Commands: {info.get('total_commands_processed', 0)}")
-        
-        # Clean up test keys
-        r.delete(test_key)
-        r0.delete("cache_test")
-        r1.delete("celery_test")
-        print("🧹 Test keys cleaned up")
-        
-        print("\n🎉 Redis is ready for your app!")
-        print("\nNext steps:")
-        print("1. Update backend/app.yaml with this Redis URL")
-        print("2. Deploy your backend to Google Cloud")
-        print("3. Test the integrated application")
+        print("\n🎉 Redis testing is disabled!")
         
         return True
         
-    except redis.ConnectionError as e:
-        print(f"❌ Connection failed: {e}")
-        print("   Check your Redis URL and network connectivity")
-        return False
-        
-    except redis.AuthenticationError as e:
-        print(f"❌ Authentication failed: {e}")
-        print("   Check your Redis password")
-        return False
-        
-    except redis.ResponseError as e:
-        print(f"❌ Redis error: {e}")
-        print("   Check your Redis configuration")
-        return False
-        
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Redis error: {e}")
+        print("   Redis functionality has been disabled")
         return False
 
 def generate_app_yaml_config():
@@ -168,22 +95,25 @@ env_variables:
 if __name__ == "__main__":
     print("🚀 Vehicle Parking App - Redis Connection Test")
     print("=" * 60)
+    print("⚠️  Redis functionality has been disabled")
+    print("The app now uses simple in-memory caching instead.")
+    print("=" * 60)
     
     # Check if redis package is installed
     try:
-        import redis
-        print("✅ Redis package is installed")
+        # import redis  # Redis disabled
+        print("✅ Redis package check disabled")
     except ImportError:
         print("❌ Redis package not found. Please run: pip install redis")
         exit(1)
     
     # Test connection
     if test_redis_connection():
-        generate_app_yaml_config()
+        print("\n✅ Redis testing completed (disabled)")
     else:
-        print("\n🔧 Troubleshooting tips:")
+        print("\n❌ Redis testing failed")
         print("1. Double-check your Redis URL format")
         print("2. Ensure your Redis instance is running")
-        print("3. Check firewall/network settings")
+        print("3. Check network connectivity")
         print("4. Verify Redis authentication")
         print("5. Try a different Redis provider if issues persist") 

@@ -1,11 +1,17 @@
 # Cache Service - Redis and Flask-Caching integration with fallback
+# This module provides caching functionality with Redis backend and fallback to simple cache
+import os
+import logging
+from typing import Any, Optional, Dict
+# import redis  # Redis disabled
+from flask import Flask
 from flask_caching import Cache
+from urllib.parse import urlparse
+import traceback
 from functools import wraps
 import json
-import logging
 import time
-import redis
-from urllib.parse import urlparse
+# import redis  # Redis disabled
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -53,51 +59,65 @@ class SimpleCache:
 simple_cache = SimpleCache()
 
 class CacheService:
-    """Service class for handling caching operations"""
+    """Centralized cache service with Redis backend and simple cache fallback"""
     
-    _redis_available = False
     _cache_instance = None
+    _initialized = False
+    # _redis_available = False  # Redis disabled
     
-    @staticmethod
-    def init_cache(app):
-        """Initialize cache with Flask app"""
+    @classmethod
+    def init_app(cls, app: Flask):
+        """Initialize cache with the Flask app"""
+        if cls._initialized:
+            return cls._cache_instance
+            
+        logger = logging.getLogger(__name__)
+        
         try:
             # Try to initialize Redis cache
-            cache.init_app(app)
+            # cache_type = app.config.get('CACHE_TYPE', 'redis')
+            cache_type = app.config.get('CACHE_TYPE', 'simple')  # Default to simple cache instead of Redis
             
             # Test Redis connection
-            redis_url = app.config.get('CACHE_REDIS_URL')
-            if redis_url:
-                # Parse Redis URL and test connection
-                parsed_url = urlparse(redis_url)
-                r = redis.Redis(
-                    host=parsed_url.hostname or 'localhost',
-                    port=parsed_url.port or 6379,
-                    password=parsed_url.password,
-                    decode_responses=True
-                )
-                r.ping()  # Test connection
-                CacheService._redis_available = True
-                CacheService._cache_instance = cache
-                logger.info("Redis cache initialized successfully")
-            else:
-                raise Exception("No Redis URL configured")
-                
+            # redis_url = app.config.get('CACHE_REDIS_URL')
+            # if redis_url:
+            #     # Parse Redis URL and test connection
+            #     parsed_url = urlparse(redis_url)
+            #     r = redis.Redis(
+            #         host=parsed_url.hostname,
+            #         port=parsed_url.port,
+            #         password=parsed_url.password,
+            #         db=int(parsed_url.path[1:]) if parsed_url.path else 0,
+            #         decode_responses=True
+            #     )
+            #     r.ping()  # Test connection
+            #     CacheService._redis_available = True
+            #     
+            #     logger.info("Redis cache initialized successfully")
+            # else:
+            #     raise Exception("No Redis URL configured")
         except Exception as e:
-            logger.warning(f"Redis cache initialization failed: {str(e)}")
-            logger.info("Falling back to simple in-memory cache")
-            CacheService._redis_available = False
-            CacheService._cache_instance = simple_cache
+            # logger.warning(f"Redis cache initialization failed: {str(e)}")
+            logger.info("Redis cache disabled - using simple cache")
+            app.config['CACHE_TYPE'] = 'simple'
+            # CacheService._redis_available = False
+            
+        # Initialize Flask-Caching
+        cls._cache_instance = Cache()
+        cls._cache_instance.init_app(app)
+        cls._initialized = True
+        
+        return cls._cache_instance
     
+    # @classmethod
+    # def is_redis_available(cls):
+    #     """Check if Redis is available"""
+    #     return CacheService._redis_available
+
     @staticmethod
     def get_cache():
         """Get the active cache instance"""
         return CacheService._cache_instance or simple_cache
-    
-    @staticmethod
-    def is_redis_available():
-        """Check if Redis is available"""
-        return CacheService._redis_available
     
     @staticmethod
     def get_parking_lots_cache_key():
@@ -198,6 +218,53 @@ class CacheService:
             logger.error(f"Failed to get cached parking lot {lot_id}: {str(e)}")
             return None
 
+    @classmethod
+    def get_cache_info(cls) -> Dict[str, Any]:
+        """Get cache information and statistics"""
+        if not cls._initialized:
+            return {'error': 'Cache not initialized'}
+            
+        try:
+            stats = {
+                'initialized': cls._initialized,
+                'type': cls._cache_instance.config.get('CACHE_TYPE', 'unknown'),
+                'timeout': cls._cache_instance.config.get('CACHE_DEFAULT_TIMEOUT', 300),
+            }
+            
+            # cache_type = "Redis" if CacheService.is_redis_available() else "Simple"
+            cache_type = "Simple"  # Redis disabled
+            stats['cache_type'] = cache_type
+            stats['status'] = 'active'
+            # stats['redis_available'] = CacheService.is_redis_available()
+            stats['redis_available'] = False  # Redis disabled
+            
+            # Get cache-specific information
+            # if CacheService.is_redis_available():
+            #     # Get Redis-specific stats if available
+            #     try:
+            #         redis_url = CacheService._cache_instance.config.get('CACHE_REDIS_URL')
+            #         if redis_url:
+            #             parsed_url = urlparse(redis_url)
+            #             r = redis.Redis(
+            #                 host=parsed_url.hostname,
+            #                 port=parsed_url.port,
+            #                 password=parsed_url.password,
+            #                 db=int(parsed_url.path[1:]) if parsed_url.path else 0
+            #             )
+            #             stats['redis_info'] = {
+            #                 'connected_clients': r.info().get('connected_clients', 0),
+            #                 'used_memory_human': r.info().get('used_memory_human', '0B'),
+            #                 'keyspace_hits': r.info().get('keyspace_hits', 0),
+            #                 'keyspace_misses': r.info().get('keyspace_misses', 0)
+            #             }
+            #     except Exception as e:
+            #         stats['redis_error'] = str(e)
+            
+            return stats
+            
+        except Exception as e:
+            return {'error': f'Failed to get cache info: {str(e)}'}
+
 def cached_response(timeout=300, key_func=None):
     """
     Decorator for caching API responses
@@ -258,61 +325,6 @@ def cache_key_with_params(**params):
         param_str = ':'.join([f"{k}:{v}" for k, v in params.items()])
         return f"params:{param_str}:{args}:{kwargs}"
     return key_generator
-
-class CacheStats:
-    """Class for cache statistics and management"""
-    
-    @staticmethod
-    def get_cache_info():
-        """Get cache information and statistics"""
-        try:
-            cache_type = "Redis" if CacheService.is_redis_available() else "Simple"
-            stats = {
-                'cache_type': cache_type,
-                'redis_available': CacheService.is_redis_available(),
-                'status': 'active'
-            }
-            
-            if CacheService.is_redis_available():
-                # Get Redis-specific stats if available
-                try:
-                    redis_url = CacheService._cache_instance.config.get('CACHE_REDIS_URL')
-                    if redis_url:
-                        parsed_url = urlparse(redis_url)
-                        r = redis.Redis(
-                            host=parsed_url.hostname or 'localhost',
-                            port=parsed_url.port or 6379,
-                            password=parsed_url.password
-                        )
-                        info = r.info()
-                        stats['redis_info'] = {
-                            'connected_clients': info.get('connected_clients', 0),
-                            'used_memory_human': info.get('used_memory_human', 'N/A'),
-                            'total_commands_processed': info.get('total_commands_processed', 0)
-                        }
-                except Exception as e:
-                    stats['redis_error'] = str(e)
-            
-            return stats
-        except Exception as e:
-            logger.error(f"Failed to get cache info: {str(e)}")
-            return {'status': 'error', 'error': str(e)}
-    
-    @staticmethod
-    def clear_all_cache():
-        """Clear all cache data"""
-        try:
-            active_cache = CacheService.get_cache()
-            if hasattr(active_cache, 'clear'):
-                active_cache.clear()
-                logger.info("All cache cleared successfully")
-                return True
-            else:
-                logger.warning("Cache clear not supported")
-                return False
-        except Exception as e:
-            logger.error(f"Failed to clear cache: {str(e)}")
-            return False
 
 def monitor_performance(func_name=None):
     """Decorator to monitor function performance"""
