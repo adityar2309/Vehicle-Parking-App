@@ -8,10 +8,10 @@ env_variables:
   
   # Redis Configuration (DISABLED)
   # REDIS_URL: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"
-      CACHE_TYPE: simple  # Use simple cache instead of Redis
-    # CACHE_REDIS_URL: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
-        # CELERY_BROKER_URL: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
-    # CELERY_RESULT_BACKEND: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
+  CACHE_TYPE: simple  # Use simple cache instead of Redis
+  # CACHE_REDIS_URL: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
+  # CELERY_BROKER_URL: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
+  # CELERY_RESULT_BACKEND: "redis://:a4JhT7HkNCVDCiwDo4nL212zzSbPSgJR@redis-13431.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:13431/0"  # Redis disabled
   
   # Email configuration (optional)
   MAIL_SERVER: "smtp.gmail.com"
