@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from config import Config
@@ -37,8 +37,9 @@ def create_app():
     jwt = JWTManager(app)
     CORS(app, 
          origins=app.config['CORS_ORIGINS'],
-         allow_headers=['Content-Type', 'Authorization'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+         allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         supports_credentials=True)
     
     # Initialize email service
     mail.init_app(app)
@@ -98,6 +99,18 @@ def create_app():
         print(f"JWT missing token error: {error}")
         return jsonify({'error': 'Authorization token is required'}), 401
     
+    # CORS preflight handler
+    @app.before_request
+    def handle_preflight():
+        """Handle CORS preflight requests"""
+        if request.method == "OPTIONS":
+            response = jsonify({'message': 'OK'})
+            response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response
+
     # Health check endpoint
     @app.route('/health', methods=['GET'])
     def health_check():
