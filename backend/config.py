@@ -22,7 +22,11 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     
     # CORS configuration
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',') if os.environ.get('CORS_ORIGINS') else ['http://localhost:3000']
+    cors_origins_env = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
+    if cors_origins_env == '*':
+        CORS_ORIGINS = '*'  # Allow all origins
+    else:
+        CORS_ORIGINS = cors_origins_env.split(',') if cors_origins_env else ['http://localhost:3000']
     
     # Email configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'

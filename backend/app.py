@@ -35,7 +35,10 @@ def create_app():
     # Initialize extensions
     # db.init_app(app)  # Commented out - SQLAlchemy dependency
     jwt = JWTManager(app)
-    CORS(app, origins=app.config['CORS_ORIGINS'])
+    CORS(app, 
+         origins=app.config['CORS_ORIGINS'],
+         allow_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     
     # Initialize email service
     mail.init_app(app)

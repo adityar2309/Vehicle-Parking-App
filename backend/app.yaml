@@ -20,8 +20,8 @@ env_variables:
   MAIL_USERNAME: "your-email@gmail.com"
   MAIL_PASSWORD: "your-app-password"
   
-  # CORS origins for production - will be updated after frontend deployment
-  CORS_ORIGINS: "*"
+  # CORS origins for production - Frontend deployed on Netlify
+  CORS_ORIGINS: "https://vehicle-parking-app.netlify.app,http://localhost:3000"
 
 automatic_scaling:
   min_instances: 1
